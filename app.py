@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import re
-from transformers import MarianMTModel, MarianTokenizer
+from googletrans import Translator
 
 st.set_page_config(page_title="Informe de Patentes Apícolas", layout="wide")
 
@@ -9,27 +9,23 @@ st.set_page_config(page_title="Informe de Patentes Apícolas", layout="wide")
 def load_data():
     return pd.read_csv("ORBIT_REGISTRO_QUERY.csv")
 
-@st.cache_resource
-def load_translation_model():
-    model_name = "Helsinki-NLP/opus-mt-en-es"
-    tokenizer = MarianTokenizer.from_pretrained(model_name)
-    model = MarianMTModel.from_pretrained(model_name)
-    return tokenizer, model
+translator = Translator()
 
-def traducir_texto(texto, tokenizer, model):
+def traducir_texto(texto):
     if not texto or len(texto.strip()) < 5:
         return "Resumen no disponible."
-    inputs = tokenizer(texto, return_tensors="pt", truncation=True)
-    translated = model.generate(**inputs, max_new_tokens=300)
-    return tokenizer.decode(translated[0], skip_special_tokens=True)
+    try:
+        traduccion = translator.translate(texto, src='en', dest='es')
+        return traduccion.text
+    except Exception as e:
+        return f"Error en traducción: {e}"
 
 def limpiar_titulo(titulo):
     # Elimina todo lo que esté entre paréntesis (inclusive los paréntesis) y espacios alrededor
     return re.sub(r'\s*\([^)]*\)\s*', '', titulo).strip()
 
-# Cargar datos y modelo
+# Cargar datos
 df = load_data()
-tokenizer, model = load_translation_model()
 
 # Preprocesar títulos
 df['Titulo_limpio'] = df['Title'].apply(limpiar_titulo)
@@ -44,7 +40,7 @@ df_filtrado = df[df['Titulo_limpio'] == titulo_seleccionado]
 # Mostrar resultados
 for _, row in df_filtrado.iterrows():
     st.subheader(row['Titulo_limpio'])
-    resumen_traducido = traducir_texto(row['Abstract'], tokenizer, model)
+    resumen_traducido = traducir_texto(row['Abstract'])
     st.markdown(f"**Resumen en español (traducido automáticamente):** {resumen_traducido}")
     st.markdown(f"**Inventores:** {row['Inventors']}")
     st.markdown(f"**Asignatario(s):** {row['Latest standardized assignees - inventors removed']}")
@@ -53,4 +49,5 @@ for _, row in df_filtrado.iterrows():
     st.markdown(f"**Número de publicación:** {row['Publication numbers with kind code']}")
     st.markdown(f"**Fecha de publicación:** {row['Publication dates']}")
     st.markdown("---")
+
 
