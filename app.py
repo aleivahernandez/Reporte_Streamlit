@@ -11,25 +11,44 @@ page_style = """
 body {
     background-color: #f9f4ef;
 }
-/* Estilos para el contenedor de las tarjetas */
-.container {
-    display: flex;
-    flex-wrap: wrap; /* Permite que las tarjetas salten a la siguiente línea si no caben */
-    justify-content: center; /* Centra las tarjetas horizontalmente */
-    gap: 20px; /* Espacio entre las tarjetas */
-    padding: 10px; /* Pequeño padding alrededor del contenedor */
-}
-
-/* Estilos para el botón de Streamlit para que se parezca a una tarjeta */
-/* Aquí es donde aplicamos la responsividad y el tamaño */
-.stButton > button {
+/* Revertimos los estilos de .card si los habías puesto antes */
+.card {
     background-color: white;
     border: 1px solid #ddd;
     border-radius: 12px;
     padding: 16px;
-    margin: 0; /* Eliminamos el margin para que el gap del contenedor controle el espacio */
+    margin: 12px;
+    width: 300px; /* Tamaño original o similar */
+    height: 120px; /* Tamaño original o similar */
     box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
-    transition: transform 0.2s ease, background-color 0.2s ease;
+    transition: transform 0.2s ease;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    text-align: center;
+}
+.card:hover {
+    transform: scale(1.02);
+    background-color: #f0f0f0;
+}
+.container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+/* Estilos para el botón de Streamlit para que se parezca a una tarjeta */
+.stButton>button {
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 16px;
+    margin: 12px; /* Margen para espacio entre botones */
+    width: 300px; /* Tamaño original o similar */
+    height: 120px; /* Tamaño original o similar */
+    box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
     cursor: pointer;
     font-weight: bold;
     text-align: center;
@@ -37,25 +56,17 @@ body {
     align-items: center;
     justify-content: center;
     color: inherit;
-    font-size: 1.1em; /* Unidades relativas para el tamaño de fuente */
-    line-height: 1.4;
-
-    /* Propiedades clave para la responsividad y el tamaño */
-    flex-grow: 1; /* Permite que el botón crezca para llenar el espacio */
-    flex-shrink: 1; /* Permite que el botón se encoja */
-    flex-basis: calc(33.33% - 40px); /* Para 3 columnas: 100% / 3 - (2 * gap) */
-    min-width: 280px; /* Ancho mínimo para evitar que sean demasiado pequeñas */
-    max-width: 380px; /* Ancho máximo para que no sean excesivamente grandes */
-    height: 150px; /* Un alto fijo puede ser aceptable, o usa min-height/max-height */
+    font-size: 16px; /* Ajustado para el tamaño de botón */
+    line-height: 1.3;
 }
-
-.stButton > button:hover {
+.stButton>button:hover {
     transform: scale(1.02);
     background-color: #f0f0f0;
 }
-/* Estilos para ocultar los bordes de las columnas de Streamlit si no los quieres */
-.stColumns {
-    gap: 0px !important; /* Elimina el espacio entre columnas de Streamlit para que el gap de .container lo maneje */
+/* Aseguramos que las columnas de Streamlit no tengan márgenes internos inesperados */
+.stColumns > div {
+    padding: 0px !important; /* Elimina padding interno de las columnas de Streamlit */
+    margin: 0px !important;  /* Elimina margen interno de las columnas de Streamlit */
 }
 </style>
 """
@@ -103,7 +114,7 @@ if "idx" in query_params:
             patente = df.iloc[idx]
             st.title(patente["Titulo_es"])
 
-            # --- NUEVA SECCIÓN DE DETALLES ---
+            # --- SECCIÓN DE DETALLES ---
             st.subheader("Información Clave")
             st.markdown(f"- **Número de Publicación:** {patente.get('Publication numbers', 'No disponible')}")
 
@@ -127,7 +138,7 @@ if "idx" in query_params:
                 for inv in inventors_list:
                     st.markdown(f"  - {inv}")
             st.markdown("---")
-            # --- FIN NUEVA SECCIÓN DE DETALLES ---
+            # --- FIN SECCIÓN DE DETALLES ---
 
             st.markdown(f"**Resumen:** {patente.get('Resumen_es', 'Resumen no disponible.')}")
             st.markdown("---")
@@ -154,14 +165,13 @@ else:
     st.title("Informe de Patentes Apícolas - Landing Page")
     st.markdown("Haz clic en una patente para ver más detalles.")
     
-    # Creamos el contenedor que gestionará la disposición de las tarjetas
-    st.markdown('<div class="container">', unsafe_allow_html=True)
+    # Volvemos a usar st.columns para la disposición en 3 columnas
+    # Esto manejará la responsividad básica (cambiará a 1 columna en móviles)
+    # pero mantendrá el control de 3 columnas en pantallas más grandes.
+    cols = st.columns(3) 
     
-    # No usamos st.columns aquí, el CSS con flexbox se encargará de la distribución
     for i, titulo in enumerate(df["Titulo_es"]):
-        # Cada botón se añadirá directamente al contenedor HTML
-        if st.button(titulo, key=f"patent_card_{i}"):
-            st.query_params["idx"] = str(i)
-            st.rerun()
-            
-    st.markdown('</div>', unsafe_allow_html=True)
+        with cols[i % 3]: # Asigna cada tarjeta a una columna de 3
+            if st.button(titulo, key=f"patent_card_{i}"):
+                st.query_params["idx"] = str(i)
+                st.rerun()
