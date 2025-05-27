@@ -21,7 +21,7 @@ body {
     height: 120px;
     box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
     transition: transform 0.2s ease;
-    cursor: pointer; /* Lo volvemos a poner para el estilo, pero el clic lo manejará Streamlit */
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -105,6 +105,33 @@ if "idx" in query_params:
         if 0 <= idx < len(df):
             patente = df.iloc[idx]
             st.title(patente["Titulo_es"])
+
+            # --- NUEVA SECCIÓN DE DETALLES ---
+            st.subheader("Información Clave")
+            st.markdown(f"- **Número de Publicación:** {patente.get('Publication numbers', 'No disponible')}")
+
+            # Extraer País de Origen
+            pub_numbers = str(patente.get('Publication numbers', ''))
+            pais_origen = pub_numbers[:2] if len(pub_numbers) >= 2 else "No disponible"
+            st.markdown(f"- **País de Origen:** {pais_origen}")
+
+            # Extraer Fecha de Publicación (primer elemento si hay varios)
+            pub_dates = str(patente.get('Publication dates', ''))
+            fecha_publicacion = pub_dates.split(';')[0].strip() if pub_dates else "No disponible"
+            st.markdown(f"- **Fecha de Publicación:** {fecha_publicacion}")
+
+            # Mostrar Inventores como lista
+            inventors = patente.get('Inventors', 'No disponible')
+            if pd.isna(inventors) or inventors == 'No disponible':
+                st.markdown(f"- **Inventores:** No disponible")
+            else:
+                inventors_list = [inv.strip() for inv in str(inventors).split(';') if inv.strip()]
+                st.markdown(f"- **Inventores:**")
+                for inv in inventors_list:
+                    st.markdown(f"  - {inv}")
+            st.markdown("---")
+            # --- FIN NUEVA SECCIÓN DE DETALLES ---
+
             st.markdown(f"**Resumen:** {patente.get('Resumen_es', 'Resumen no disponible.')}")
             st.markdown("---")
             if st.button("🔙 Volver"):
@@ -131,14 +158,10 @@ else:
     st.markdown("Haz clic en una patente para ver más detalles.")
     st.markdown('<div class="container">', unsafe_allow_html=True)
 
-    # REEMPLAZO CLAVE AQUÍ: Usamos st.button para gestionar la navegación interna
-    cols = st.columns(3) # Para organizar las tarjetas en 3 columnas
+    cols = st.columns(3)
     for i, titulo in enumerate(df["Titulo_es"]):
-        with cols[i % 3]: # Asigna cada tarjeta a una columna
-            # Creamos un botón. Cuando se presiona, modificamos los query_params
-            # y luego llamamos a st.rerun() para que la app se ejecute de nuevo
-            # con los nuevos parámetros, simulando la navegación.
+        with cols[i % 3]:
             if st.button(titulo, key=f"patent_card_{i}"):
-                st.query_params["idx"] = str(i) # Establece el parámetro 'idx'
-                st.rerun() # Vuelve a ejecutar la aplicación para mostrar la vista detallada
+                st.query_params["idx"] = str(i)
+                st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
