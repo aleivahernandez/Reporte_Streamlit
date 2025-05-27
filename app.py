@@ -1,95 +1,65 @@
 import streamlit as st
 import pandas as pd
 from deep_translator import GoogleTranslator
-import re
 
-# ==== Funciones de limpieza y traducción ====
-def limpiar_titulo(titulo):
-    if isinstance(titulo, str):
-        return re.sub(r'\s*\([^)]*\)\s*', '', titulo).strip()
-    return ""
+# Cargar datos
+df = pd.read_csv("ORBIT_REGISTRO_QUERY.csv")
 
-def traducir_texto(texto, src="en", dest="es"):
+# Limpiar títulos
+df['Titulo_limpio'] = df['Title'].fillna("").astype(str).apply(lambda x: x.strip())
+
+# Traducir títulos si no están traducidos
+@st.cache_data
+def traducir_texto(texto):
     if not isinstance(texto, str) or len(texto.strip()) < 5:
-        return "Resumen no disponible."
+        return "Título no disponible"
     try:
-        return GoogleTranslator(source=src, target=dest).translate(texto)
-    except Exception:
-        return "Traducción no disponible."
+        return GoogleTranslator(source='en', target='es').translate(texto)
+    except:
+        return texto
 
-@st.cache_data(show_spinner=False)
-def traducir_columna(textos):
-    return [traducir_texto(t) for t in textos]
+@st.cache_data
+def traducir_columna(col):
+    return [traducir_texto(x) for x in col]
 
-# ==== Carga de datos ====
-df = pd.read_csv("ORBIT_REGISTRO_QUERY.csv")  # Asegúrate que el nombre sea correcto
+if 'Titulo_es' not in df.columns:
+    df['Titulo_es'] = traducir_columna(df['Titulo_limpio'])
 
-df["Titulo_limpio"] = df["Title"].apply(limpiar_titulo)
-df["Titulo_es"] = traducir_columna(df["Titulo_limpio"])
-df["Resumen_es"] = traducir_columna(df["Abstract"])
+# Obtener parámetros de URL
+query_params = st.query_params
+idx = int(query_params.get("idx", [0])[0])
 
-# ==== Estilos CSS ====
-page_style = """
-<style>
-    body {
-        background-color: #f0f2f6;
+# Estilos
+st.markdown("""
+    <style>
+    .tarjeta {
+        background-color: #f8f9fa;
+        border: 1px solid #ddd;
+        padding: 1rem;
+        margin-bottom: 0.8rem;
+        border-radius: 0.5rem;
+        transition: all 0.2s ease-in-out;
     }
-    .card {
-        background-color: white;
-        padding: 20px;
-        margin: 10px;
-        border-radius: 12px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-        transition: 0.3s;
+    .tarjeta:hover {
+        background-color: #e9ecef;
         cursor: pointer;
-        height: 100px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
     }
-    .card:hover {
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-        transform: scale(1.02);
-    }
-    .cards-container {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: space-around;
-    }
-</style>
-"""
-st.markdown(page_style, unsafe_allow_html=True)
+    </style>
+""", unsafe_allow_html=True)
 
-# ==== Navegación por parámetros ====
-params = st.query_params
-idx = params.get("idx", [None])[0]
-try:
-    idx = int(idx) if idx is not None else None
-except ValueError:
-    idx = None
-
-# ==== Página de detalle ====
-if idx is not None and 0 <= idx < len(df):
+# Mostrar detalle si hay idx
+if idx:
+    st.title("Detalle de Patente")
     patente = df.iloc[idx]
-    st.markdown("### 📝 Detalle de la patente")
-    st.markdown(f"**Título:** {patente['Titulo_es']}")
-    st.markdown(f"**Resumen:** {patente['Resumen_es']}")
-    if st.button("🔙 Volver al listado"):
-        st.query_params.clear()
-        st.rerun()
-else:
-    # ==== Página de inicio (Landing Page) ====
-    st.title("🌼 Informe de Patentes Apícolas")
+    st.subheader(patente['Titulo_es'])
+    st.write(patente.get('Abstract', 'Resumen no disponible'))
+    st.link_button("🔙 Volver", url="/")
 
-    st.markdown('<div class="cards-container">', unsafe_allow_html=True)
+else:
+    st.title("Informe de Patentes Apícolas")
+
     for i, row in df.iterrows():
-        st.markdown(
-            f"""
-            <div class="card" onclick="window.location.href='/?idx={i}'" role="button" tabindex="0">
-                {row['Titulo_es']}
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-    st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            if st.button(row['Titulo_es'], key=f"patente_{i}"):
+                st.query_params["idx"] = i
+                st.rerun()
