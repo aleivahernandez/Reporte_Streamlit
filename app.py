@@ -66,4 +66,46 @@ body {
 }
 </style>
 """
-st.markdown(page_style, un_
+st.markdown(page_style, unsafe_allow_html=True)
+
+def mostrar_landing():
+    st.title("📋 Lista de Patentes Apícolas")
+    st.markdown("Haz clic en una tarjeta para ver detalles.\n")
+
+    tarjetas_html = '<div class="grid-container">'
+    for idx, titulo in enumerate(st.session_state.titulos_traducidos):
+        tarjetas_html += f'''
+        <div class="card" onclick="window.location.href='/?idx={idx}'" role="button" tabindex="0">
+            {titulo}
+        </div>
+        '''
+    tarjetas_html += '</div>'
+    st.markdown(tarjetas_html, unsafe_allow_html=True)
+
+def mostrar_detalle(idx):
+    row = df.loc[idx]
+    st.title(st.session_state.titulos_traducidos[idx])
+    resumen_traducido = traducir_texto(row['Abstract'])
+    st.markdown(f"**Resumen en español:** {resumen_traducido}")
+    st.markdown(f"**Inventores:** {row['Inventors']}")
+    st.markdown(f"**Asignatario(s):** {row['Latest standardized assignees - inventors removed']}")
+    st.markdown(f"**País del asignatario:** {row['Assignee country']}")
+    st.markdown(f"**Fecha de prioridad más antigua:** {row['Earliest priority date']}")
+    st.markdown(f"**Número de publicación:** {row['Publication numbers with kind code']}")
+    st.markdown(f"**Fecha de publicación:** {row['Publication dates']}")
+
+    if st.button("← Volver al listado"):
+        st.experimental_set_query_params(idx=None)
+        st.session_state.patente_seleccionada = None
+        st.experimental_rerun()
+
+# Obtener parámetros con st.query_params
+query_params = st.query_params
+if "idx" in query_params and query_params["idx"]:
+    try:
+        idx = int(query_params["idx"][0])
+        mostrar_detalle(idx)
+    except:
+        mostrar_landing()
+else:
+    mostrar_landing()
