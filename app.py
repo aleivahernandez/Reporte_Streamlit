@@ -6,7 +6,6 @@ import re
 st.set_page_config(page_title="Informe de Patentes Apícolas", layout="wide")
 
 # ===== Estilos CSS personalizados =====
-# Mantendremos los estilos, pero las tarjetas no usarán la funcionalidad onclick
 page_style = """
 <style>
 body {
@@ -22,17 +21,44 @@ body {
     height: 120px;
     box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
     transition: transform 0.2s ease;
-    /* Eliminamos cursor: pointer y cualquier JS */
+    cursor: pointer; /* Lo volvemos a poner para el estilo, pero el clic lo manejará Streamlit */
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: bold;
     text-align: center;
 }
+.card:hover {
+    transform: scale(1.02);
+    background-color: #f0f0f0;
+}
 .container {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
+}
+/* Estilos para el botón de Streamlit para que se parezca a una tarjeta */
+.stButton>button {
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 16px;
+    margin: 12px;
+    width: 300px; /* Ancho fijo para simular la tarjeta */
+    height: 120px; /* Alto fijo para simular la tarjeta */
+    box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+    cursor: pointer;
+    font-weight: bold;
+    text-align: center;
+    display: flex; /* Para centrar el texto del botón */
+    align-items: center;
+    justify-content: center;
+    color: inherit; /* Heredar color de texto para que no sea el azul por defecto */
+}
+.stButton>button:hover {
+    transform: scale(1.02);
+    background-color: #f0f0f0;
 }
 </style>
 """
@@ -50,7 +76,7 @@ def traducir_texto(texto, src="en", dest="es"):
     try:
         return GoogleTranslator(source=src, target=dest).translate(texto)
     except Exception as e:
-        st.warning(f"Error de traducción para el texto: '{texto[:50]}...' - {e}")
+        # st.warning(f"Error de traducción para el texto: '{texto[:50]}...' - {e}") # Descomentar para depurar
         return "Error de traducción."
 
 @st.cache_data(show_spinner=False)
@@ -58,11 +84,11 @@ def cargar_y_preparar_datos(filepath):
     df = pd.read_csv(filepath)
     df["Titulo_limpio"] = df["Title"].apply(limpiar_titulo)
 
-    st.info("Traduciendo títulos al español... Esto puede tomar un momento.")
-    df["Titulo_es"] = [traducir_texto(t) for t in df["Titulo_limpio"]]
+    with st.spinner("Traduciendo títulos al español... Esto puede tomar un momento."):
+        df["Titulo_es"] = [traducir_texto(t) for t in df["Titulo_limpio"]]
 
-    st.info("Traduciendo resúmenes al español... Esto puede tomar un momento.")
-    df["Resumen_es"] = [traducir_texto(t) for t in df["Abstract"]]
+    with st.spinner("Traduciendo resúmenes al español... Esto puede tomar un momento."):
+        df["Resumen_es"] = [traducir_texto(t) for t in df["Abstract"]]
 
     return df
 
@@ -82,8 +108,8 @@ if "idx" in query_params:
             st.markdown(f"**Resumen:** {patente.get('Resumen_es', 'Resumen no disponible.')}")
             st.markdown("---")
             if st.button("🔙 Volver"):
-                query_params.clear()
-                st.rerun()
+                query_params.clear() # Limpia los parámetros de la URL
+                st.rerun() # Fuerza una nueva ejecución de la app
         else:
             st.error("Índice de patente no válido.")
             if st.button("🔙 Volver a la página principal"):
@@ -105,16 +131,14 @@ else:
     st.markdown("Haz clic en una patente para ver más detalles.")
     st.markdown('<div class="container">', unsafe_allow_html=True)
 
-    # REEMPLAZO CLAVE AQUÍ: Usamos st.link_button en lugar del HTML con onclick
-    # Cada link_button se mostrará como un botón en el layout.
+    # REEMPLAZO CLAVE AQUÍ: Usamos st.button para gestionar la navegación interna
+    cols = st.columns(3) # Para organizar las tarjetas en 3 columnas
     for i, titulo in enumerate(df["Titulo_es"]):
-        # Puedes intentar aplicar tus estilos CSS a los botones con st.button/st.link_button
-        # usando la key 'class', pero esto es limitado y experimental.
-        # Lo más sencillo es simplemente aceptar el estilo por defecto del botón
-        # o buscar alternativas más avanzadas si necesitas el estilo exacto de tarjeta.
-        st.link_button(
-            label=titulo,
-            url=f"/?idx={i}",
-            help=f"Ver detalles de: {titulo}"
-        )
+        with cols[i % 3]: # Asigna cada tarjeta a una columna
+            # Creamos un botón. Cuando se presiona, modificamos los query_params
+            # y luego llamamos a st.rerun() para que la app se ejecute de nuevo
+            # con los nuevos parámetros, simulando la navegación.
+            if st.button(titulo, key=f"patent_card_{i}"):
+                st.query_params["idx"] = str(i) # Establece el parámetro 'idx'
+                st.rerun() # Vuelve a ejecutar la aplicación para mostrar la vista detallada
     st.markdown('</div>', unsafe_allow_html=True)
