@@ -6,6 +6,7 @@ import re
 st.set_page_config(page_title="Informe de Patentes Apícolas", layout="wide")
 
 # ===== Estilos CSS personalizados =====
+# Mantendremos los estilos, pero las tarjetas no usarán la funcionalidad onclick
 page_style = """
 <style>
 body {
@@ -21,16 +22,12 @@ body {
     height: 120px;
     box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
     transition: transform 0.2s ease;
-    cursor: pointer;
+    /* Eliminamos cursor: pointer y cualquier JS */
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: bold;
     text-align: center;
-}
-.card:hover {
-    transform: scale(1.02);
-    background-color: #f0f0f0;
 }
 .container {
     display: flex;
@@ -61,8 +58,6 @@ def cargar_y_preparar_datos(filepath):
     df = pd.read_csv(filepath)
     df["Titulo_limpio"] = df["Title"].apply(limpiar_titulo)
 
-    # Aseguramos que siempre se intenten traducir estas columnas
-    # Esto es útil si el archivo CSV se actualiza y queremos retraducir
     st.info("Traduciendo títulos al español... Esto puede tomar un momento.")
     df["Titulo_es"] = [traducir_texto(t) for t in df["Titulo_limpio"]]
 
@@ -72,7 +67,6 @@ def cargar_y_preparar_datos(filepath):
     return df
 
 # ===== Cargar y preparar datos =====
-# Cambiamos cómo se llama la función de carga para incluir la preparación y traducción
 df = cargar_y_preparar_datos("ORBIT_REGISTRO_QUERY.csv")
 
 
@@ -111,12 +105,16 @@ else:
     st.markdown("Haz clic en una patente para ver más detalles.")
     st.markdown('<div class="container">', unsafe_allow_html=True)
 
+    # REEMPLAZO CLAVE AQUÍ: Usamos st.link_button en lugar del HTML con onclick
+    # Cada link_button se mostrará como un botón en el layout.
     for i, titulo in enumerate(df["Titulo_es"]):
-        card_html = f"""
-        <div class="card" onclick="window.location.href='/?idx={i}'" role="button" tabindex="0">
-            {titulo}
-        </div>
-        """
-        st.markdown(card_html, unsafe_allow_html=True)
-
+        # Puedes intentar aplicar tus estilos CSS a los botones con st.button/st.link_button
+        # usando la key 'class', pero esto es limitado y experimental.
+        # Lo más sencillo es simplemente aceptar el estilo por defecto del botón
+        # o buscar alternativas más avanzadas si necesitas el estilo exacto de tarjeta.
+        st.link_button(
+            label=titulo,
+            url=f"/?idx={i}",
+            help=f"Ver detalles de: {titulo}"
+        )
     st.markdown('</div>', unsafe_allow_html=True)
