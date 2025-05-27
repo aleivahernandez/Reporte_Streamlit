@@ -11,45 +11,25 @@ page_style = """
 body {
     background-color: #f9f4ef;
 }
-.card {
-    background-color: white;
-    border: 1px solid #ddd;
-    border-radius: 12px;
-    padding: 16px;
-    margin: 12px;
-    /* Ajusta estos valores para hacer las tarjetas más grandes */
-    width: 400px; /* Incrementado de 300px */
-    height: 180px; /* Incrementado de 120px */
-    box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
-    transition: transform 0.2s ease;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    text-align: center;
-}
-.card:hover {
-    transform: scale(1.02);
-    background-color: #f0f0f0;
-}
+/* Estilos para el contenedor de las tarjetas */
 .container {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
+    flex-wrap: wrap; /* Permite que las tarjetas salten a la siguiente línea si no caben */
+    justify-content: center; /* Centra las tarjetas horizontalmente */
+    gap: 20px; /* Espacio entre las tarjetas */
+    padding: 10px; /* Pequeño padding alrededor del contenedor */
 }
+
 /* Estilos para el botón de Streamlit para que se parezca a una tarjeta */
-.stButton>button {
+/* Aquí es donde aplicamos la responsividad y el tamaño */
+.stButton > button {
     background-color: white;
     border: 1px solid #ddd;
     border-radius: 12px;
     padding: 16px;
-    margin: 12px;
-    /* Ajusta estos valores para hacer los botones más grandes */
-    width: 400px; /* Incrementado de 300px */
-    height: 180px; /* Incrementado de 120px */
+    margin: 0; /* Eliminamos el margin para que el gap del contenedor controle el espacio */
     box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
-    transition: transform 0.2s ease;
+    transition: transform 0.2s ease, background-color 0.2s ease;
     cursor: pointer;
     font-weight: bold;
     text-align: center;
@@ -57,13 +37,25 @@ body {
     align-items: center;
     justify-content: center;
     color: inherit;
-    /* Puedes ajustar el tamaño de fuente si el texto es demasiado pequeño */
-    font-size: 18px; /* Ejemplo: Ajusta según sea necesario */
-    line-height: 1.4; /* Espaciado entre líneas para mejor lectura */
+    font-size: 1.1em; /* Unidades relativas para el tamaño de fuente */
+    line-height: 1.4;
+
+    /* Propiedades clave para la responsividad y el tamaño */
+    flex-grow: 1; /* Permite que el botón crezca para llenar el espacio */
+    flex-shrink: 1; /* Permite que el botón se encoja */
+    flex-basis: calc(33.33% - 40px); /* Para 3 columnas: 100% / 3 - (2 * gap) */
+    min-width: 280px; /* Ancho mínimo para evitar que sean demasiado pequeñas */
+    max-width: 380px; /* Ancho máximo para que no sean excesivamente grandes */
+    height: 150px; /* Un alto fijo puede ser aceptable, o usa min-height/max-height */
 }
-.stButton>button:hover {
+
+.stButton > button:hover {
     transform: scale(1.02);
     background-color: #f0f0f0;
+}
+/* Estilos para ocultar los bordes de las columnas de Streamlit si no los quieres */
+.stColumns {
+    gap: 0px !important; /* Elimina el espacio entre columnas de Streamlit para que el gap de .container lo maneje */
 }
 </style>
 """
@@ -161,13 +153,15 @@ if "idx" in query_params:
 else:
     st.title("Informe de Patentes Apícolas - Landing Page")
     st.markdown("Haz clic en una patente para ver más detalles.")
+    
+    # Creamos el contenedor que gestionará la disposición de las tarjetas
     st.markdown('<div class="container">', unsafe_allow_html=True)
-
-    # REEMPLAZO CLAVE AQUÍ: Ajustamos el número de columnas a 2 para tarjetas más grandes
-    cols = st.columns(2) # Cambiado de 3 a 2 columnas
+    
+    # No usamos st.columns aquí, el CSS con flexbox se encargará de la distribución
     for i, titulo in enumerate(df["Titulo_es"]):
-        with cols[i % 2]: # Ajusta el módulo al nuevo número de columnas
-            if st.button(titulo, key=f"patent_card_{i}"):
-                st.query_params["idx"] = str(i)
-                st.rerun()
+        # Cada botón se añadirá directamente al contenedor HTML
+        if st.button(titulo, key=f"patent_card_{i}"):
+            st.query_params["idx"] = str(i)
+            st.rerun()
+            
     st.markdown('</div>', unsafe_allow_html=True)
