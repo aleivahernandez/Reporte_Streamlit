@@ -22,7 +22,7 @@ def traducir_columna(textos):
     return [traducir_texto(t) for t in textos]
 
 # ==== Carga de datos ====
-df = pd.read_csv("datos_patentes.csv")  # Asegúrate que el nombre sea correcto
+df = pd.read_csv("ORBIT_REGISTRO_QUERY.csv")  # Asegúrate que el nombre sea correcto
 
 df["Titulo_limpio"] = df["Title"].apply(limpiar_titulo)
 df["Titulo_es"] = traducir_columna(df["Titulo_limpio"])
