@@ -1,68 +1,101 @@
 import streamlit as st
 import pandas as pd
 from deep_translator import GoogleTranslator
+import re
 
-# Cargar datos
-df = pd.read_csv("ORBIT_REGISTRO_QUERY.csv")
+st.set_page_config(page_title="Informe de Patentes Apícolas", layout="wide")
 
-# Limpiar títulos
-df['Titulo_limpio'] = df['Title'].fillna("").astype(str).apply(lambda x: x.strip())
+# ===== Estilos CSS personalizados =====
+page_style = """
+<style>
+body {
+    background-color: #f9f4ef;
+}
+.card {
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 16px;
+    margin: 12px;
+    width: 300px;
+    height: 120px;
+    box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    text-align: center;
+}
+.card:hover {
+    transform: scale(1.02);
+    background-color: #f0f0f0;
+}
+.container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+</style>
+"""
+st.markdown(page_style, unsafe_allow_html=True)
 
-# Traducir títulos si no están traducidos
-@st.cache_data
-def traducir_texto(texto):
+# ===== Funciones =====
+def limpiar_titulo(titulo):
+    if pd.isna(titulo):
+        return ""
+    return re.sub(r'\s*\([^)]*\)\s*', '', titulo).strip()
+
+def traducir_texto(texto, src="en", dest="es"):
     if not isinstance(texto, str) or len(texto.strip()) < 5:
-        return "Título no disponible"
+        return "Resumen no disponible."
     try:
-        return GoogleTranslator(source='en', target='es').translate(texto)
+        return GoogleTranslator(source=src, target=dest).translate(texto)
     except:
-        return texto
+        return "Error de traducción."
 
-@st.cache_data
-def traducir_columna(col):
-    return [traducir_texto(x) for x in col]
+@st.cache_data(show_spinner=False)
+def traducir_columna_texto(textos):
+    return [traducir_texto(t) for t in textos]
 
-if 'Titulo_es' not in df.columns:
-    df['Titulo_es'] = traducir_columna(df['Titulo_limpio'])
+# ===== Cargar datos =====
+df = pd.read_csv("ORBIT_REGISTRO_QUERY")
+df["Titulo_limpio"] = df["Title"].apply(limpiar_titulo)
 
-# Obtener parámetros de URL
+# ===== Traducir si no están las columnas traducidas =====
+if "Titulo_es" not in df.columns:
+    df["Titulo_es"] = traducir_columna_texto(df["Titulo_limpio"])
+if "Resumen_es" not in df.columns:
+    df["Resumen_es"] = traducir_columna_texto(df["Abstract"])
+
+# ===== Landing page o vista detallada =====
 query_params = st.query_params
-idx = int(query_params.get("idx", [0])[0])
 
-# Estilos
-st.markdown("""
-    <style>
-    .tarjeta {
-        background-color: #f8f9fa;
-        border: 1px solid #ddd;
-        padding: 1rem;
-        margin-bottom: 0.8rem;
-        border-radius: 0.5rem;
-        transition: all 0.2s ease-in-out;
-    }
-    .tarjeta:hover {
-        background-color: #e9ecef;
-        cursor: pointer;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# Mostrar detalle si hay idx
-if idx:
-    st.title("Detalle de Patente")
-    patente = df.iloc[idx]
-    st.subheader(patente['Titulo_es'])
-    st.write(patente.get('Abstract', 'Resumen no disponible'))
-    if st.button("🔙 Volver"):
-        st.query_params.clear()
-        st.rerun()
-
-
+if "idx" in query_params:
+    try:
+        idx = int(query_params["idx"][0])
+        patente = df.iloc[idx]
+        st.title(patente["Titulo_es"])
+        st.markdown(f"**Resumen:** {patente.get('Resumen_es', 'Resumen no disponible.')}")
+        st.markdown("---")
+        if st.button("🔙 Volver"):
+            query_params.clear()
+            st.rerun()
+    except Exception as e:
+        st.error("Error al cargar la patente seleccionada.")
+        st.exception(e)
 else:
-    st.title("Informe de Patentes Apícolas")
+    st.title("Informe de Patentes Apícolas - Landing Page")
+    st.markdown("Haz clic en una patente para ver más detalles.")
+    st.markdown('<div class="container">', unsafe_allow_html=True)
 
-    for i, row in df.iterrows():
-        with st.container():
-            if st.button(row['Titulo_es'], key=f"patente_{i}"):
-                st.query_params["idx"] = i
-                st.rerun()
+    for i, titulo in enumerate(df["Titulo_es"]):
+        card_html = f"""
+        <div class="card" onclick="window.location.href='/?idx={i}'" role="button" tabindex="0">
+            {titulo}
+        </div>
+        """
+        st.markdown(card_html, unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
