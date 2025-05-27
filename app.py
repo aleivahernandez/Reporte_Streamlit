@@ -29,7 +29,6 @@ if "titulos_traducidos" not in st.session_state:
 if "patente_seleccionada" not in st.session_state:
     st.session_state.patente_seleccionada = None
 
-# Estilos CSS para fondo y tarjetas
 page_style = """
 <style>
 body {
@@ -38,17 +37,19 @@ body {
     color: #333;
     padding: 1rem;
 }
-
 .main > div {
     max-width: 1100px;
     margin: auto;
 }
-
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill,minmax(280px,1fr));
+    gap: 20px;
+}
 .card {
     background: rgba(255, 255, 255, 0.9);
     border-radius: 15px;
     padding: 20px;
-    margin-bottom: 25px;
     height: 150px;
     display: flex;
     align-items: center;
@@ -57,24 +58,14 @@ body {
     box-shadow: 0 8px 16px rgba(0,0,0,0.15);
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    user-select: none;
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #005f73;
 }
 .card:hover {
     transform: translateY(-6px);
     box-shadow: 0 12px 24px rgba(0,0,0,0.25);
-}
-
-h1 {
-    text-align: center;
-    margin-bottom: 2rem;
-    font-weight: 700;
-    color: #005f73;
-}
-
-button[role="button"] {
-    all: unset;
-    width: 100%;
-    height: 100%;
-    display: block;
 }
 </style>
 """
@@ -84,33 +75,17 @@ def mostrar_landing():
     st.title("📋 Lista de Patentes Apícolas")
     st.markdown("Haz clic en una tarjeta para ver detalles.\n")
 
-    num_cols = 3
-    cols = st.columns(num_cols)
-
-    for i, (titulo, idx) in enumerate(zip(st.session_state.titulos_traducidos, df.index)):
-        with cols[i % num_cols]:
-            btn_key = f"btn_{idx}"
-            # Botón estilizado para ocupar toda la tarjeta
-            if st.button(titulo, key=btn_key):
-                st.session_state.patente_seleccionada = idx
-            # Aplica estilo de tarjeta al botón
-            st.markdown(
-                f"""
-                <style>
-                div.stButton > button#{btn_key} {{
-                    all: unset;
-                    cursor: pointer;
-                    width: 100%;
-                    height: 150px;
-                    background: rgba(255,255,255,0);
-                    border-radius: 15px;
-                }}
-                </style>
-                """, unsafe_allow_html=True
-            )
-            # Se usa st.markdown para el fondo y texto porque el botón no admite estilos complejos directamente
-            # El truco aquí es que el botón está invisible pero ocupa todo el espacio
-            st.markdown(f'<div class="card">{titulo}</div>', unsafe_allow_html=True)
+    # Contenedor grid para tarjetas
+    tarjetas_html = '<div class="grid-container">'
+    for idx, titulo in enumerate(st.session_state.titulos_traducidos):
+        # Cada tarjeta tiene un div con onclick que envía el índice por Streamlit rerun vía query params
+        tarjetas_html += f'''
+        <div class="card" onclick="window.location.href='/?idx={idx}'" role="button" tabindex="0">
+            {titulo}
+        </div>
+        '''
+    tarjetas_html += '</div>'
+    st.markdown(tarjetas_html, unsafe_allow_html=True)
 
 def mostrar_detalle(idx):
     row = df.loc[idx]
@@ -125,9 +100,16 @@ def mostrar_detalle(idx):
     st.markdown(f"**Fecha de publicación:** {row['Publication dates']}")
 
     if st.button("← Volver al listado"):
-        st.session_state.patente_seleccionada = None
+        st.experimental_set_query_params(idx=None)
+        st.experimental_rerun()
 
-if st.session_state.patente_seleccionada is None:
-    mostrar_landing()
+# Detectar parámetro idx en la URL para saber si mostramos detalle o landing
+query_params = st.experimental_get_query_params()
+if "idx" in query_params and query_params["idx"]:
+    try:
+        idx = int(query_params["idx"][0])
+        mostrar_detalle(idx)
+    except:
+        mostrar_landing()
 else:
-    mostrar_detalle(st.session_state.patente_seleccionada)
+    mostrar_landing()
