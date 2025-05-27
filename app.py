@@ -1,114 +1,50 @@
 import streamlit as st
 import pandas as pd
 import re
-from transformers import MarianMTModel, MarianTokenizer
+from googletrans import Translator
 
-st.set_page_config(page_title="Landing Page de Patentes Apícolas", layout="wide")
+st.set_page_config(page_title="Informe de Patentes Apícolas", layout="wide")
 
 @st.cache_data
 def load_data():
-    df = pd.read_csv("ORBIT_REGISTRO_QUERY.csv")
-    # Limpiar título: quitar texto en paréntesis
-    df['Titulo_limpio'] = df['Title'].apply(lambda x: re.sub(r'\s*\([^)]*\)\s*', '', x).strip())
-    return df
+    return pd.read_csv("ORBIT_REGISTRO_QUERY.csv")
 
-@st.cache_resource
-def load_translation_model():
-    model_name = "Helsinki-NLP/opus-mt-en-es"
-    tokenizer = MarianTokenizer.from_pretrained(model_name)
-    model = MarianMTModel.from_pretrained(model_name)
-    return tokenizer, model
+def limpiar_titulo(titulo):
+    return re.sub(r'\s*\([^)]*\)\s*', '', titulo).strip()
 
-def traducir_texto(texto, tokenizer, model):
+# Cargar datos
+df = load_data()
+
+# Limpiar títulos
+df['Titulo_limpio'] = df['Title'].apply(limpiar_titulo)
+
+translator = Translator()
+
+def traducir_texto(texto):
     if not texto or len(texto.strip()) < 5:
         return "Resumen no disponible."
-    inputs = tokenizer(texto, return_tensors="pt", truncation=True)
-    translated = model.generate(**inputs, max_new_tokens=300)
-    return tokenizer.decode(translated[0], skip_special_tokens=True)
-
-def traducir_titulo(titulo, tokenizer, model):
-    # Traducir título completo (puedes simplificar si es muy largo)
-    return traducir_texto(titulo, tokenizer, model)
-
-# Cargar datos y modelo
-df = load_data()
-tokenizer, model = load_translation_model()
-
-# Traducir títulos y crear lista para mostrar
-# IMPORTANTE: para no traducir en cada reload, cacheamos el resultado en una nueva columna
-if 'Titulo_es' not in df.columns:
-    df['Titulo_es'] = df['Titulo_limpio'].apply(lambda t: traducir_titulo(t, tokenizer, model))
-
-# Crear lista de patentes para mostrar en tarjetas, con índice para URL
-patentes = []
-for i, row in df.iterrows():
-    patentes.append({"idx": i, "titulo": row['Titulo_es']})
-
-# CSS para tarjetas
-page_style = """
-<style>
-  .grid-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fill,minmax(280px,1fr));
-    gap: 20px;
-    padding: 10px;
-  }
-  .card {
-    background: #e0f7fa;
-    border-radius: 12px;
-    padding: 20px;
-    height: 150px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    box-shadow: 0 6px 12px rgba(0,0,0,0.1);
-    cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    font-weight: 600;
-    font-size: 1rem;
-    color: #00796b;
-  }
-  .card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 12px 24px rgba(0,0,0,0.2);
-  }
-</style>
-"""
-
-st.markdown(page_style, unsafe_allow_html=True)
-
-# Mostrar grid de tarjetas
-cards_html = '<div class="grid-container">'
-for patente in patentes:
-    cards_html += f"""
-    <div class="card" onclick="window.location.href='/?idx={patente['idx']}'" role="button" tabindex="0">
-        {patente['titulo']}
-    </div>
-    """
-cards_html += '</div>'
-
-st.markdown(cards_html, unsafe_allow_html=True)
-
-# Leer parámetro idx para mostrar detalle
-query_params = st.experimental_get_query_params()
-if "idx" in query_params:
     try:
-        idx = int(query_params["idx"][0])
-        if 0 <= idx < len(df):
-            row = df.iloc[idx]
-            st.markdown("---")
-            st.header("Detalle de patente seleccionada")
-            st.subheader(row['Titulo_es'])
-            resumen_traducido = traducir_texto(row['Abstract'], tokenizer, model)
-            st.markdown(f"**Resumen en español (traducido automáticamente):** {resumen_traducido}")
-            st.markdown(f"**Inventores:** {row['Inventors']}")
-            st.markdown(f"**Asignatario(s):** {row['Latest standardized assignees - inventors removed']}")
-            st.markdown(f"**País del asignatario:** {row['Assignee country']}")
-            st.markdown(f"**Fecha de prioridad más antigua:** {row['Earliest priority date']}")
-            st.markdown(f"**Número de publicación:** {row['Publication numbers with kind code']}")
-            st.markdown(f"**Fecha de publicación:** {row['Publication dates']}")
-        else:
-            st.error("Índice fuera de rango.")
+        resultado = translator.translate(texto, src='en', dest='es')
+        return resultado.text
     except Exception as e:
-        st.error(f"Error leyendo el parámetro idx: {e}")
+        return "Error en traducción."
+
+# Sidebar con lista de títulos limpios
+st.sidebar.header("🎛️ Filtro por título de patente")
+titulo_seleccionado = st.sidebar.selectbox("Selecciona un título", sorted(df['Titulo_limpio'].unique()))
+
+# Filtrar DataFrame
+df_filtrado = df[df['Titulo_limpio'] == titulo_seleccionado]
+
+# Mostrar tarjeta con título traducido y resumen traducido
+for _, row in df_filtrado.iterrows():
+    st.subheader(row['Titulo_limpio'])
+    resumen_traducido = traducir_texto(row['Abstract'])
+    st.markdown(f"**Resumen en español (traducido):** {resumen_traducido}")
+    st.markdown(f"**Inventores:** {row['Inventors']}")
+    st.markdown(f"**Asignatario(s):** {row['Latest standardized assignees - inventors removed']}")
+    st.markdown(f"**País del asignatario:** {row['Assignee country']}")
+    st.markdown(f"**Fecha de prioridad más antigua:** {row['Earliest priority date']}")
+    st.markdown(f"**Número de publicación:** {row['Publication numbers with kind code']}")
+    st.markdown(f"**Fecha de publicación:** {row['Publication dates']}")
+    st.markdown("---")
