@@ -24,7 +24,8 @@ def traducir_texto(texto, tokenizer, model):
     return tokenizer.decode(translated[0], skip_special_tokens=True)
 
 def limpiar_titulo(titulo):
-    return re.sub(r'^[A-Z]{2}\d+[A-Z]?\s*-\s*', '', titulo).strip()
+    # Elimina todo lo que esté entre paréntesis (inclusive los paréntesis) y espacios alrededor
+    return re.sub(r'\s*\([^)]*\)\s*', '', titulo).strip()
 
 # Cargar datos y modelo
 df = load_data()
