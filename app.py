@@ -5,7 +5,7 @@ st.set_page_config(page_title="Informe de Patentes Apícolas", layout="wide")
 
 @st.cache_data
 def load_data():
-    return pd.read_csv("patentes_apicola.csv")
+    return pd.read_csv("ORBIT_REGISTRO_QUERY.csv")
 
 df = load_data()
 
