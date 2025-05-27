@@ -14,12 +14,16 @@ def limpiar_titulo(titulo):
     return re.sub(r'\s*\([^)]*\)\s*', '', titulo).strip()
 
 def traducir_texto(texto, src="en", dest="es"):
-    if not texto or len(texto.strip()) < 5:
+    if not texto or (isinstance(texto, float) and pd.isna(texto)):
+        return "Resumen no disponible."
+    texto_str = str(texto).strip()
+    if len(texto_str) < 5:
         return "Resumen no disponible."
     try:
-        return GoogleTranslator(source=src, target=dest).translate(texto)
+        return GoogleTranslator(source=src, target=dest).translate(texto_str)
     except Exception as e:
         return f"Error en traducción: {e}"
+
 
 df = load_data()
 
