@@ -97,3 +97,18 @@ if "idx" in query_params:
         idx = int(query_params["idx"][0])
         if 0 <= idx < len(df):
             row = df.iloc[idx]
+            st.markdown("---")
+            st.header("Detalle de patente seleccionada")
+            st.subheader(row['Titulo_es'])
+            resumen_traducido = traducir_texto(row['Abstract'], tokenizer, model)
+            st.markdown(f"**Resumen en español (traducido automáticamente):** {resumen_traducido}")
+            st.markdown(f"**Inventores:** {row['Inventors']}")
+            st.markdown(f"**Asignatario(s):** {row['Latest standardized assignees - inventors removed']}")
+            st.markdown(f"**País del asignatario:** {row['Assignee country']}")
+            st.markdown(f"**Fecha de prioridad más antigua:** {row['Earliest priority date']}")
+            st.markdown(f"**Número de publicación:** {row['Publication numbers with kind code']}")
+            st.markdown(f"**Fecha de publicación:** {row['Publication dates']}")
+        else:
+            st.error("Índice fuera de rango.")
+    except Exception as e:
+        st.error(f"Error leyendo el parámetro idx: {e}")
