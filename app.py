@@ -21,19 +21,13 @@ def traducir_texto(texto):
 def limpiar_titulo(titulo):
     return re.sub(r'\s*\([^)]*\)\s*', '', titulo).strip()
 
-# Cargar y preprocesar datos
 df = load_data()
 df['Titulo_limpio'] = df['Title'].apply(limpiar_titulo)
 df['Titulo_traducido'] = df['Titulo_limpio'].apply(traducir_texto)
 
-# Estado para saber si mostrar listado o detalle
+# Inicializar variable de sesión
 if "patente_seleccionada" not in st.session_state:
     st.session_state.patente_seleccionada = None
-
-# Sidebar: botón para volver a listado
-if st.session_state.patente_seleccionada:
-    if st.sidebar.button("← Volver al listado"):
-        st.session_state.patente_seleccionada = None
 
 if st.session_state.patente_seleccionada is None:
     st.title("📋 Lista de Patentes Apícolas")
@@ -41,12 +35,17 @@ if st.session_state.patente_seleccionada is None:
 
     # Mostrar títulos como botones
     for idx, row in df.iterrows():
-        if st.button(row['Titulo_traducido'], key=idx):
+        if st.button(row['Titulo_traducido'], key=f"btn_{idx}"):
             st.session_state.patente_seleccionada = idx
+            # No usar st.experimental_rerun()
             st.experimental_rerun()
-
 else:
-    # Mostrar detalle de la patente seleccionada
+    # Mostrar botón para volver
+    if st.button("← Volver al listado"):
+        st.session_state.patente_seleccionada = None
+        st.experimental_rerun()
+
+    # Mostrar detalle
     row = df.loc[st.session_state.patente_seleccionada]
 
     st.title(row['Titulo_traducido'])
