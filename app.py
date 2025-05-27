@@ -1,83 +1,95 @@
 import streamlit as st
 import pandas as pd
-import re
 from deep_translator import GoogleTranslator
+import re
 
-st.set_page_config(page_title="Informe de Patentes Apícolas", layout="wide")
-
-@st.cache_data
-def load_data():
-    return pd.read_csv("ORBIT_REGISTRO_QUERY.csv")
-
+# ==== Funciones de limpieza y traducción ====
 def limpiar_titulo(titulo):
-    # Quitar paréntesis y espacios
-    return re.sub(r'\s*\([^)]*\)\s*', '', titulo).strip()
+    if isinstance(titulo, str):
+        return re.sub(r'\s*\([^)]*\)\s*', '', titulo).strip()
+    return ""
 
 def traducir_texto(texto, src="en", dest="es"):
-    if not texto or (isinstance(texto, float) and pd.isna(texto)):
-        return "Resumen no disponible."
-    texto_str = str(texto).strip()
-    if len(texto_str) < 5:
+    if not isinstance(texto, str) or len(texto.strip()) < 5:
         return "Resumen no disponible."
     try:
-        return GoogleTranslator(source=src, target=dest).translate(texto_str)
-    except Exception as e:
-        return f"Error en traducción: {e}"
+        return GoogleTranslator(source=src, target=dest).translate(texto)
+    except Exception:
+        return "Traducción no disponible."
 
-
-df = load_data()
-
-# Limpiamos títulos y traducimos
-df['Titulo_limpio'] = df['Title'].apply(limpiar_titulo)
-
-# Traduce títulos y abstract una sola vez y cachea resultados
 @st.cache_data(show_spinner=False)
-def traducir_columna_texto(textos):
+def traducir_columna(textos):
     return [traducir_texto(t) for t in textos]
 
-df['Titulo_es'] = traducir_columna_texto(df['Titulo_limpio'])
-df['Resumen_es'] = traducir_columna_texto(df['Abstract'])
+# ==== Carga de datos ====
+df = pd.read_csv("datos_patentes.csv")  # Asegúrate que el nombre sea correcto
 
-# Landing page: Mostrar tarjetas con títulos traducidos
-st.title("Informe de Patentes Apícolas - Landing Page")
+df["Titulo_limpio"] = df["Title"].apply(limpiar_titulo)
+df["Titulo_es"] = traducir_columna(df["Titulo_limpio"])
+df["Resumen_es"] = traducir_columna(df["Abstract"])
 
-st.write("Haz clic en una patente para ver más detalles.")
+# ==== Estilos CSS ====
+page_style = """
+<style>
+    body {
+        background-color: #f0f2f6;
+    }
+    .card {
+        background-color: white;
+        padding: 20px;
+        margin: 10px;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        transition: 0.3s;
+        cursor: pointer;
+        height: 100px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+    }
+    .card:hover {
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        transform: scale(1.02);
+    }
+    .cards-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-around;
+    }
+</style>
+"""
+st.markdown(page_style, unsafe_allow_html=True)
 
-# Para la navegación, usamos query params para seleccionar índice
-query_params = st.experimental_get_query_params()
-idx_seleccionado = int(query_params.get("idx", [0])[0])
+# ==== Navegación por parámetros ====
+params = st.query_params
+idx = params.get("idx", [None])[0]
+try:
+    idx = int(idx) if idx is not None else None
+except ValueError:
+    idx = None
 
-# Mostrar tarjetas
-cols_per_row = 3
-for i in range(0, len(df), cols_per_row):
-    cols = st.columns(cols_per_row)
-    for j, col in enumerate(cols):
-        idx = i + j
-        if idx >= len(df):
-            break
-        titulo = df.loc[idx, 'Titulo_es']
-        # Tarjeta clicable: al hacer clic, cambia el query param idx
-        card_html = f"""
-        <div class="card" role="button" tabindex="0" 
-             onclick="window.location.href='/?idx={idx}'" 
-             style="padding: 15px; margin: 5px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                    background: #f9f9f9; cursor: pointer; height: 120px; overflow: hidden;">
-            <h4 style="font-size: 16px; color: #333;">{titulo}</h4>
-        </div>
-        """
-        col.markdown(card_html, unsafe_allow_html=True)
+# ==== Página de detalle ====
+if idx is not None and 0 <= idx < len(df):
+    patente = df.iloc[idx]
+    st.markdown("### 📝 Detalle de la patente")
+    st.markdown(f"**Título:** {patente['Titulo_es']}")
+    st.markdown(f"**Resumen:** {patente['Resumen_es']}")
+    if st.button("🔙 Volver al listado"):
+        st.query_params.clear()
+        st.rerun()
+else:
+    # ==== Página de inicio (Landing Page) ====
+    st.title("🌼 Informe de Patentes Apícolas")
 
-st.markdown("---")
-
-# Mostrar detalle si se seleccionó índice válido
-if 0 <= idx_seleccionado < len(df):
-    row = df.iloc[idx_seleccionado]
-    st.header(row['Titulo_es'])
-    st.markdown(f"**Resumen:** {row['Resumen_es']}")
-    st.markdown(f"**Inventores:** {row['Inventors']}")
-    st.markdown(f"**Asignatario(s):** {row['Latest standardized assignees - inventors removed']}")
-    st.markdown(f"**País del asignatario:** {row['Assignee country']}")
-    st.markdown(f"**Fecha de prioridad más antigua:** {row['Earliest priority date']}")
-    st.markdown(f"**Número de publicación:** {row['Publication numbers with kind code']}")
-    st.markdown(f"**Fecha de publicación:** {row['Publication dates']}")
-
+    st.markdown('<div class="cards-container">', unsafe_allow_html=True)
+    for i, row in df.iterrows():
+        st.markdown(
+            f"""
+            <div class="card" onclick="window.location.href='/?idx={i}'" role="button" tabindex="0">
+                {row['Titulo_es']}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    st.markdown('</div>', unsafe_allow_html=True)
