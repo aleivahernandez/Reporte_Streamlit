@@ -17,8 +17,9 @@ body {
     border-radius: 12px;
     padding: 16px;
     margin: 12px;
-    width: 300px;
-    height: 120px;
+    /* Ajusta estos valores para hacer las tarjetas más grandes */
+    width: 400px; /* Incrementado de 300px */
+    height: 180px; /* Incrementado de 120px */
     box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
     transition: transform 0.2s ease;
     cursor: pointer;
@@ -44,17 +45,21 @@ body {
     border-radius: 12px;
     padding: 16px;
     margin: 12px;
-    width: 300px; /* Ancho fijo para simular la tarjeta */
-    height: 120px; /* Alto fijo para simular la tarjeta */
+    /* Ajusta estos valores para hacer los botones más grandes */
+    width: 400px; /* Incrementado de 300px */
+    height: 180px; /* Incrementado de 120px */
     box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
     transition: transform 0.2s ease;
     cursor: pointer;
     font-weight: bold;
     text-align: center;
-    display: flex; /* Para centrar el texto del botón */
+    display: flex;
     align-items: center;
     justify-content: center;
-    color: inherit; /* Heredar color de texto para que no sea el azul por defecto */
+    color: inherit;
+    /* Puedes ajustar el tamaño de fuente si el texto es demasiado pequeño */
+    font-size: 18px; /* Ejemplo: Ajusta según sea necesario */
+    line-height: 1.4; /* Espaciado entre líneas para mejor lectura */
 }
 .stButton>button:hover {
     transform: scale(1.02);
@@ -135,8 +140,8 @@ if "idx" in query_params:
             st.markdown(f"**Resumen:** {patente.get('Resumen_es', 'Resumen no disponible.')}")
             st.markdown("---")
             if st.button("🔙 Volver"):
-                query_params.clear() # Limpia los parámetros de la URL
-                st.rerun() # Fuerza una nueva ejecución de la app
+                query_params.clear()
+                st.rerun()
         else:
             st.error("Índice de patente no válido.")
             if st.button("🔙 Volver a la página principal"):
@@ -158,9 +163,10 @@ else:
     st.markdown("Haz clic en una patente para ver más detalles.")
     st.markdown('<div class="container">', unsafe_allow_html=True)
 
-    cols = st.columns(3)
+    # REEMPLAZO CLAVE AQUÍ: Ajustamos el número de columnas a 2 para tarjetas más grandes
+    cols = st.columns(2) # Cambiado de 3 a 2 columnas
     for i, titulo in enumerate(df["Titulo_es"]):
-        with cols[i % 3]:
+        with cols[i % 2]: # Ajusta el módulo al nuevo número de columnas
             if st.button(titulo, key=f"patent_card_{i}"):
                 st.query_params["idx"] = str(i)
                 st.rerun()
