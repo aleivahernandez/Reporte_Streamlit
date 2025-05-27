@@ -22,20 +22,44 @@ def limpiar_titulo(titulo):
 
 df = load_data()
 df['Titulo_limpio'] = df['Title'].apply(limpiar_titulo)
-df['Titulo_traducido'] = df['Titulo_limpio'].apply(traducir_texto)
 
-# Selector de título (solo títulos traducidos para mostrar)
-titulo_traducido = st.selectbox("Selecciona una patente:", df['Titulo_traducido'].tolist())
+# Traducir títulos *una sola vez* y guardar en sesión para no repetir traducción en cada ejecución
+if "titulos_traducidos" not in st.session_state:
+    st.session_state.titulos_traducidos = [traducir_texto(t) for t in df['Titulo_limpio']]
 
-# Mostrar detalles de la patente seleccionada
-row = df[df['Titulo_traducido'] == titulo_traducido].iloc[0]
+# Estado para patente seleccionada
+if "patente_seleccionada" not in st.session_state:
+    st.session_state.patente_seleccionada = None
 
-st.title(row['Titulo_traducido'])
-resumen_traducido = traducir_texto(row['Abstract'])
-st.markdown(f"**Resumen en español:** {resumen_traducido}")
-st.markdown(f"**Inventores:** {row['Inventors']}")
-st.markdown(f"**Asignatario(s):** {row['Latest standardized assignees - inventors removed']}")
-st.markdown(f"**País del asignatario:** {row['Assignee country']}")
-st.markdown(f"**Fecha de prioridad más antigua:** {row['Earliest priority date']}")
-st.markdown(f"**Número de publicación:** {row['Publication numbers with kind code']}")
-st.markdown(f"**Fecha de publicación:** {row['Publication dates']}")
+def mostrar_landing():
+    st.title("📋 Lista de Patentes Apícolas")
+    st.markdown("Haz clic en un título para ver detalles.\n")
+
+    # Mostrar en columnas para diseño tipo cards
+    num_cols = 3
+    cols = st.columns(num_cols)
+
+    for i, (titulo, idx) in enumerate(zip(st.session_state.titulos_traducidos, df.index)):
+        with cols[i % num_cols]:
+            if st.button(titulo, key=f"btn_{idx}"):
+                st.session_state.patente_seleccionada = idx
+
+def mostrar_detalle(idx):
+    row = df.loc[idx]
+    st.title(st.session_state.titulos_traducidos[idx])
+    resumen_traducido = traducir_texto(row['Abstract'])
+    st.markdown(f"**Resumen en español:** {resumen_traducido}")
+    st.markdown(f"**Inventores:** {row['Inventors']}")
+    st.markdown(f"**Asignatario(s):** {row['Latest standardized assignees - inventors removed']}")
+    st.markdown(f"**País del asignatario:** {row['Assignee country']}")
+    st.markdown(f"**Fecha de prioridad más antigua:** {row['Earliest priority date']}")
+    st.markdown(f"**Número de publicación:** {row['Publication numbers with kind code']}")
+    st.markdown(f"**Fecha de publicación:** {row['Publication dates']}")
+
+    if st.button("← Volver al listado"):
+        st.session_state.patente_seleccionada = None
+
+if st.session_state.patente_seleccionada is None:
+    mostrar_landing()
+else:
+    mostrar_detalle(st.session_state.patente_seleccionada)
