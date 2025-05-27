@@ -60,7 +60,7 @@ def traducir_columna_texto(textos):
     return [traducir_texto(t) for t in textos]
 
 # ===== Cargar datos =====
-df = pd.read_csv("ORBIT_REGISTRO_QUERY")
+df = pd.read_csv("ORBIT_REGISTRO_QUERY.csv")
 df["Titulo_limpio"] = df["Title"].apply(limpiar_titulo)
 
 # ===== Traducir si no están las columnas traducidas =====
