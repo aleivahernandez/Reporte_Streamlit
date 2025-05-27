@@ -53,7 +53,10 @@ if idx:
     patente = df.iloc[idx]
     st.subheader(patente['Titulo_es'])
     st.write(patente.get('Abstract', 'Resumen no disponible'))
-    st.link_button("🔙 Volver", url="/")
+    if st.button("🔙 Volver"):
+        st.query_params.clear()
+        st.rerun()
+
 
 else:
     st.title("Informe de Patentes Apícolas")
