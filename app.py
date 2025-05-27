@@ -23,6 +23,7 @@ def limpiar_titulo(titulo):
 
 df = load_data()
 df['Titulo_limpio'] = df['Title'].apply(limpiar_titulo)
+df['Titulo_traducido'] = df['Titulo_limpio'].apply(traducir_texto)
 
 st.sidebar.header("🎛️ Filtro por título de patente")
 titulo_seleccionado = st.sidebar.selectbox("Selecciona un título", sorted(df['Titulo_limpio'].unique()))
@@ -31,6 +32,7 @@ df_filtrado = df[df['Titulo_limpio'] == titulo_seleccionado]
 
 for _, row in df_filtrado.iterrows():
     st.subheader(row['Titulo_limpio'])
+    st.markdown(f"*Título traducido:* {row['Titulo_traducido']}")
     resumen_traducido = traducir_texto(row['Abstract'])
     st.markdown(f"**Resumen en español (traducido automáticamente):** {resumen_traducido}")
     st.markdown(f"**Inventores:** {row['Inventors']}")
