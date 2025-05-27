@@ -23,26 +23,59 @@ def limpiar_titulo(titulo):
 df = load_data()
 df['Titulo_limpio'] = df['Title'].apply(limpiar_titulo)
 
-# Traducir títulos *una sola vez* y guardar en sesión para no repetir traducción en cada ejecución
 if "titulos_traducidos" not in st.session_state:
     st.session_state.titulos_traducidos = [traducir_texto(t) for t in df['Titulo_limpio']]
 
-# Estado para patente seleccionada
 if "patente_seleccionada" not in st.session_state:
     st.session_state.patente_seleccionada = None
 
 def mostrar_landing():
     st.title("📋 Lista de Patentes Apícolas")
-    st.markdown("Haz clic en un título para ver detalles.\n")
+    st.markdown("Haz clic en una tarjeta para ver detalles.\n")
 
-    # Mostrar en columnas para diseño tipo cards
     num_cols = 3
     cols = st.columns(num_cols)
 
+    card_style = """
+    <style>
+    .card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+        height: 150px;  /* altura fija */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        background-color: #fafafa;
+        cursor: pointer;
+        box-shadow: 2px 2px 5px rgb(0 0 0 / 0.1);
+        transition: box-shadow 0.3s ease;
+    }
+    .card:hover {
+        box-shadow: 4px 4px 15px rgb(0 0 0 / 0.2);
+    }
+    </style>
+    """
+    st.markdown(card_style, unsafe_allow_html=True)
+
     for i, (titulo, idx) in enumerate(zip(st.session_state.titulos_traducidos, df.index)):
         with cols[i % num_cols]:
-            if st.button(titulo, key=f"btn_{idx}"):
+            # Generar un id único para el botón oculto
+            btn_key = f"btn_{idx}"
+            # Usar un botón invisible para capturar el clic
+            if st.button("", key=btn_key, help="Ver detalles de la patente", args=None, kwargs=None):
                 st.session_state.patente_seleccionada = idx
+
+            # Mostrar la tarjeta como HTML (texto clicable no porque Streamlit no lo permite fácilmente,
+            # pero el botón invisible encima captura clics)
+            tarjeta_html = f"""
+            <div class="card">
+                <p style="font-weight:bold; font-size: 1.1rem; margin: 0;">{titulo}</p>
+            </div>
+            """
+            st.markdown(tarjeta_html, unsafe_allow_html=True)
 
 def mostrar_detalle(idx):
     row = df.loc[idx]
