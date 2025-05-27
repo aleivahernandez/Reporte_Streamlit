@@ -29,6 +29,57 @@ if "titulos_traducidos" not in st.session_state:
 if "patente_seleccionada" not in st.session_state:
     st.session_state.patente_seleccionada = None
 
+# Estilos CSS para fondo y tarjetas
+page_style = """
+<style>
+body {
+    background: linear-gradient(135deg, #c3e9f3, #eaf6f6);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
+    padding: 1rem;
+}
+
+.main > div {
+    max-width: 1100px;
+    margin: auto;
+}
+
+.card {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 25px;
+    height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.25);
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 2rem;
+    font-weight: 700;
+    color: #005f73;
+}
+
+button[role="button"] {
+    all: unset;
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+</style>
+"""
+st.markdown(page_style, unsafe_allow_html=True)
+
 def mostrar_landing():
     st.title("📋 Lista de Patentes Apícolas")
     st.markdown("Haz clic en una tarjeta para ver detalles.\n")
@@ -36,46 +87,30 @@ def mostrar_landing():
     num_cols = 3
     cols = st.columns(num_cols)
 
-    card_style = """
-    <style>
-    .card {
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 20px;
-        height: 150px;  /* altura fija */
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        background-color: #fafafa;
-        cursor: pointer;
-        box-shadow: 2px 2px 5px rgb(0 0 0 / 0.1);
-        transition: box-shadow 0.3s ease;
-    }
-    .card:hover {
-        box-shadow: 4px 4px 15px rgb(0 0 0 / 0.2);
-    }
-    </style>
-    """
-    st.markdown(card_style, unsafe_allow_html=True)
-
     for i, (titulo, idx) in enumerate(zip(st.session_state.titulos_traducidos, df.index)):
         with cols[i % num_cols]:
-            # Generar un id único para el botón oculto
             btn_key = f"btn_{idx}"
-            # Usar un botón invisible para capturar el clic
-            if st.button("", key=btn_key, help="Ver detalles de la patente", args=None, kwargs=None):
+            # Botón estilizado para ocupar toda la tarjeta
+            if st.button(titulo, key=btn_key):
                 st.session_state.patente_seleccionada = idx
-
-            # Mostrar la tarjeta como HTML (texto clicable no porque Streamlit no lo permite fácilmente,
-            # pero el botón invisible encima captura clics)
-            tarjeta_html = f"""
-            <div class="card">
-                <p style="font-weight:bold; font-size: 1.1rem; margin: 0;">{titulo}</p>
-            </div>
-            """
-            st.markdown(tarjeta_html, unsafe_allow_html=True)
+            # Aplica estilo de tarjeta al botón
+            st.markdown(
+                f"""
+                <style>
+                div.stButton > button#{btn_key} {{
+                    all: unset;
+                    cursor: pointer;
+                    width: 100%;
+                    height: 150px;
+                    background: rgba(255,255,255,0);
+                    border-radius: 15px;
+                }}
+                </style>
+                """, unsafe_allow_html=True
+            )
+            # Se usa st.markdown para el fondo y texto porque el botón no admite estilos complejos directamente
+            # El truco aquí es que el botón está invisible pero ocupa todo el espacio
+            st.markdown(f'<div class="card">{titulo}</div>', unsafe_allow_html=True)
 
 def mostrar_detalle(idx):
     row = df.loc[idx]
